@@ -1,14 +1,46 @@
 package main
 
 import (
+	"os"
 	"fmt"
-	
-	
+	"log"
+	//"fpTracking"
+	"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	fingerprintManager := fpTracking.FingerprintManager{
+	nb_parameters := os.Args[1]
+	
+	db, err := sql.Open("mysql", "root:mysql@/fingerprint")
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer db.Close()
+
+	var (
+		counter int
+		userId string
+	)
+	
+	rows, err := db.Query("select counter, id from extensionData limit ?",nb_parameters)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		err := rows.Scan(&counter, &userId)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("id : %d, userId : %s\n",counter, userId)
+	}
+	err = rows.Err()
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	/*fingerprintManager := fpTracking.FingerprintManager{
 		Number: 30000,
 		Train:  0.4}
 
@@ -23,5 +55,5 @@ func main() {
 		scenarioResult := fpTracking.ReplayScenario(fpTracking.RuleBasedLinking, test, visitFrequency)
 		fpTracking.AnalyseScenarioResult(scenarioResult, test,
 			fileName1, fileName2)
-	}
+	}*/
 }

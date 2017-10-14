@@ -9,13 +9,13 @@ import (
 	"math"
 	"os"
 	"sort"
-	"strconv"
+	//"strconv"
 	"strings"
 	"time"
 
 	"github.com/avct/uasurfer"
-	uuid "github.com/satori/go.uuid"
-	"github.com/xrash/smetrics"
+	//uuid "github.com/satori/go.uuid"
+	//"github.com/xrash/smetrics"
 )
 
 // Fingerprint data structure
@@ -104,7 +104,7 @@ type FingerprintManager struct {
 
 // GetFingerprints returns two slices train, test of Fingerprint structs
 func (fm FingerprintManager) GetFingerprints() ([]Fingerprint, []Fingerprint) {
-	db, _ := sql.Open("mysql", "root:bdd@/canvas_fp_project?parseTime=true")
+	db, _ := sql.Open("mysql", "root:mysql@/fingerprint?parseTime=true")
 	defer db.Close()
 
 	file, _ := os.Open("./data/consistent_extension_ids.csv")

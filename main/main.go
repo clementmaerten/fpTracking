@@ -1,16 +1,16 @@
 package main
 
 import (
-	"os"
+	//"os"
 	"fmt"
-	"log"
-	//"fpTracking"
-	"database/sql"
+	//"log"
+	"fpTracking"
+	//"database/sql"
 	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
-	nb_parameters := os.Args[1]
+	/*nb_parameters := os.Args[1]
 	
 	db, err := sql.Open("mysql", "root:mysql@/fingerprint")
 	if err != nil {
@@ -38,9 +38,9 @@ func main() {
 	err = rows.Err()
 	if err != nil {
 		log.Fatal(err)
-	}
+	}*/
 	
-	/*fingerprintManager := fpTracking.FingerprintManager{
+	fingerprintManager := fpTracking.FingerprintManager{
 		Number: 30000,
 		Train:  0.4}
 
@@ -51,9 +51,11 @@ func main() {
 	expName := "testrule1"
 	for _, visitFrequency := range visitFrequencies {
 		fileName1 := fmt.Sprintf("./results/%s_%d-res1.csv", expName, visitFrequency)
+		fmt.Println("fileName 1 : ",fileName1)
 		fileName2 := fmt.Sprintf("./results/%s_%d-res2.csv", expName, visitFrequency)
-		scenarioResult := fpTracking.ReplayScenario(fpTracking.RuleBasedLinking, test, visitFrequency)
+		fmt.Println("fileName 2 : ",fileName2)
+		/*scenarioResult := fpTracking.ReplayScenario(fpTracking.RuleBasedLinking, test, visitFrequency)
 		fpTracking.AnalyseScenarioResult(scenarioResult, test,
-			fileName1, fileName2)
-	}*/
+			fileName1, fileName2)*/
+	}
 }

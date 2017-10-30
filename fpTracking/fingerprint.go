@@ -88,3 +88,14 @@ func (fp *Fingerprint) HasFlashActivated() bool {
 		return false
 	}
 }
+
+// A MODIFIER !!!!!!
+func stringListIsSubset(list1, list2 []string) bool {
+	return true
+}
+
+//Returns True if the fonts of the current fingerprint are a subset of another fingerprint fp or the opposite
+//Else, it returns False
+func (fp1 *Fingerprint) AreFontsSubset(fp2 Fingerprint) bool {
+	return stringListIsSubset(fp1.fontList,fp2.fontList) || stringListIsSubset(fp2.fontList,fp1.fontList)
+} 

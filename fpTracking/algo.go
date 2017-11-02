@@ -278,5 +278,35 @@ func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int
 	return replaySequence
 }
 
+func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) string) []Fingerprint {
 
-//Function ReplayScenario :
+	/*
+		Takes as input the fingerprint dataset,
+        the frequency of visit in days,
+        link_fingerprint, the function used for the linking strategy
+        filename, path to the file to save results of the scenario
+	*/
+
+	nb_max_cmp := 2
+	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
+	counter_to_fingerprint := make(map[int]Fingerprint)
+	for _,fingerprint := range fingerprintDataset {
+		counter_to_fingerprint[fingerprint.Counter] = fingerprint
+	}
+
+	var fps_available []Fingerprint //Set of know fingerprints
+	user_id_to_fps := make(map[string]Fingerprint)
+	counter_to_time := make(map[fingerprintLocalId]time.Time)
+
+	for index, elt := range replaySequence {
+		if index % 500 == 0 {
+			fmt.Println("index : ",index)
+		}
+
+		//ATTENTION au type de l'indexeur de la map !!!
+		counter_to_time[elt.fp_local_id] = elt.lastVisit
+	}
+
+	//JE NE SUIS PAS ENCORE SUR DU TYPE DE RETOUR DE LA FONCTION
+	return fps_available
+}

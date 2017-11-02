@@ -89,9 +89,24 @@ func (fp *Fingerprint) HasFlashActivated() bool {
 	}
 }
 
-// A MODIFIER !!!!!!
+//Returns True if everything that appears in list1 is in list2
+//Else, it returns False
 func stringListIsSubset(list1, list2 []string) bool {
-	return true
+	isSubset := true
+	for _,list1_item := range list1 {
+		isPresent := false
+		for _,list2_item := range list2 {
+			if list1_item == list2_item {
+				isPresent = true
+				break
+			}
+		}
+		if !isPresent {
+			isSubset = false
+			break
+		}
+	}
+	return isSubset
 }
 
 //Returns True if the fonts of the current fingerprint are a subset of another fingerprint fp or the opposite

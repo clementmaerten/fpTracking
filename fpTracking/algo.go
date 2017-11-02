@@ -6,6 +6,7 @@ import (
 	"time"
 	"github.com/texttheater/golang-levenshtein/levenshtein"
 	"gopkg.in/oleiade/reflections.v1"
+	"github.com/satori/go.uuid"
 )
 
 type fingerprintLocalId struct {
@@ -166,7 +167,24 @@ func ruleBased(fingerprint_unknown Fingerprint, user_id_to_fps map[string][]fing
     		}
     	}
     } else {
+    	if len(candidates) == 1 || candidates_have_same_id(candidates) {
+    		prediction = candidates[0].user_id
+    	} else if ip_allowed {
+    		//first pass with ip address
+    		for _,elt := range candidates {
+    			counter_known := elt.fp_local_id.counter
+    			fingerprint_known := counter_to_fingerprint[counter_known]
 
+    			if fingerprint_known.AddressHTTP == fingerprint_unknown.AddressHTTP {
+    				prediction = elt.user_id
+    				break
+    			}
+    		}
+    	}
+    }
+
+    if prediction == "" {
+    	prediction = generate_new_id()
     }
 
 	return prediction
@@ -193,6 +211,9 @@ func candidates_have_same_id(candidate_list []matching) bool {
 	}
 }
 
+func generate_new_id() string {
+	return fmt.Sprintf("%s",uuid.NewV4())
+}
 
 type ScenarioResult struct {
 	counterStr string

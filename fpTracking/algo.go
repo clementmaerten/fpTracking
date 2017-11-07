@@ -278,7 +278,12 @@ func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int
 	return replaySequence
 }
 
-func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) string) []Fingerprint {
+type counter_and_assigned_id struct {
+	fp_local_id fingerprintLocalId
+	assigned_id string
+}
+
+func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) string) []counter_and_assigned_id {
 
 	/*
 		Takes as input the fingerprint dataset,
@@ -294,8 +299,8 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
 		counter_to_fingerprint[fingerprint.Counter] = fingerprint
 	}
 
-	var fps_available []Fingerprint //Set of know fingerprints
-	user_id_to_fps := make(map[string]Fingerprint)
+	var fps_available []counter_and_assigned_id //Set of know fingerprints (new_counter,assigned_id)
+	user_id_to_fps := make(map[string][]fingerprintLocalId)
 	counter_to_time := make(map[fingerprintLocalId]time.Time)
 
 	for index, elt := range replaySequence {
@@ -303,10 +308,43 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
 			fmt.Println("index : ",index)
 		}
 
-		//ATTENTION au type de l'indexeur de la map !!!
 		counter_to_time[elt.fp_local_id] = elt.lastVisit
+		counter := elt.fp_local_id.counter
+		fingerprint_unknown := counter_to_fingerprint[counter]
+
+		//ATTENTION AU TEST SUR LE MODEL !
+		//if model == false
+		assigned_id := linkFingerprint(fingerprint_unknown, user_id_to_fps, counter_to_fingerprint) //QUESTION : user_id_to_fps non initialisé ...
+        
+        fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
+        
+        if len(user_id_to_fps[assigned_id]) == nb_max_cmp {
+        	//pop the first element
+        	user_id_to_fps[assigned_id] = user_id_to_fps[assigned_id][1:]
+        }
+
+        user_id_to_fps[assigned_id] = append(user_id_to_fps[assigned_id],elt.fp_local_id)
+
+        //every 2000 elements we delete elements too old
+        if index % 2000 == 0 {
+        	//30 days in seconds
+        	time_limit := float64(30*24*60*60)
+        	var ids_to_remove []string
+        	current_time := elt.lastVisit
+        	for user_id,fp_local_id_list := range user_id_to_fps {
+        		fp_local_id := fp_local_id_list[len(fp_local_id_list)-1]
+        		time_tmp := counter_to_time[fp_local_id]
+        		if current_time.Sub(time_tmp).Seconds() > time_limit {
+        			ids_to_remove = append(ids_to_remove,user_id)
+        		}
+        	}
+        	for _,user_id := range ids_to_remove {
+        		user_id_to_fps[user_id] = []fingerprintLocalId{}
+        	}
+        }
 	}
 
-	//JE NE SUIS PAS ENCORE SUR DU TYPE DE RETOUR DE LA FONCTION
+	//AJOUTER L'ECRITURE DANS LE FICHIER DE RESULTAT ?
+
 	return fps_available
 }

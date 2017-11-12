@@ -6,10 +6,11 @@ import (
 	//"log"
 	"fpTracking"
 	//"database/sql"
-	//"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
+
 	/*nb_parameters := os.Args[1]
 	
 	db, err := sql.Open("mysql", "root:mysql@/fingerprint")
@@ -54,8 +55,9 @@ func main() {
 		fmt.Println("fileName 1 : ",fileName1)
 		fileName2 := fmt.Sprintf("./results/%s_%d-res2.csv", expName, visitFrequency)
 		fmt.Println("fileName 2 : ",fileName2)
-		//scenarioResult := fpTracking.ReplayScenario(fpTracking.RuleBasedLinking, test, visitFrequency)
-		//fpTracking.AnalyseScenarioResult(scenarioResult, test,
-		//	fileName1, fileName2)
+		scenarioResult := fpTracking.ReplayScenario(test, visitFrequency, fpTracking.RuleBasedLinking)
+		//fmt.Printf("visitFrequency : %d, length of fps_available : %d\n",visitFrequency,len(scenarioResult))
+		//fpTracking.PrintScenarioResult(scenarioResult)
+		fpTracking.AnalyseScenarioResult(scenarioResult, test, fileName1, fileName2)
 	}
 }

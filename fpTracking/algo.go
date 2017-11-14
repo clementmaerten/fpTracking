@@ -440,12 +440,53 @@ func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprin
 	}
 }
 
-//ATTENTION : A MODIFIER
 func findLongestChain(real_user_id string, real_id_to_assigned_ids map[string][]string, assigned_id_to_fingerprints map[string][]Fingerprint) int {
-	return 50
+	/*
+		For a given user id, tries to find its longest chain
+	*/
+
+	assigned_id_to_count := make(map[string]int)
+
+	for _,assigned_id := range real_id_to_assigned_ids[real_user_id] {
+		tmp_count := 0
+		for _,fingerprint := range assigned_id_to_fingerprints[assigned_id] {
+			if fingerprint.UserID == real_user_id {
+				tmp_count += 1
+			}
+		}
+		assigned_id_to_count[assigned_id] = tmp_count
+	}
+
+	max := 0
+	for _,count := range assigned_id_to_count {
+		if max < count {
+			max = count
+		}
+	}
+
+	return max
 }
 
-//ATTENTION : A MODIFIER
 func computeOwnership(fingerprints []Fingerprint) (float64,string) {
-	return 15.6,"test"
+
+	real_user_id_to_count := make(map[string]int)
+	for _,fingerprint := range fingerprints {
+		if _,is_present := real_user_id_to_count[fingerprint.UserID]; is_present {
+			real_user_id_to_count[fingerprint.UserID] += 1
+		} else {
+			real_user_id_to_count[fingerprint.UserID] = 1
+		}
+	}
+
+	max := 1
+	max_key := ""
+
+	for key,count := range real_user_id_to_count {
+		if max <= count {
+			max = count
+			max_key = key
+		}
+	} 
+
+	return (float64(max)/float64(len(fingerprints))),max_key
 }

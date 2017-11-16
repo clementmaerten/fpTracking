@@ -334,10 +334,13 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
         	var ids_to_remove []string
         	current_time := elt.lastVisit
         	for user_id,fp_local_id_list := range user_id_to_fps {
-        		fp_local_id := fp_local_id_list[len(fp_local_id_list)-1]
-        		time_tmp := counter_to_time[fp_local_id]
-        		if current_time.Sub(time_tmp).Seconds() > time_limit {
-        			ids_to_remove = append(ids_to_remove,user_id)
+        		index_last_element := len(fp_local_id_list)-1
+        		if (index_last_element >= 0) {
+        			fp_local_id := fp_local_id_list[index_last_element]
+        			time_tmp := counter_to_time[fp_local_id]
+        			if current_time.Sub(time_tmp).Seconds() > time_limit {
+        				ids_to_remove = append(ids_to_remove,user_id)
+        			}
         		}
         	}
         	for _,user_id := range ids_to_remove {

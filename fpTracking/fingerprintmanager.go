@@ -3,8 +3,8 @@ package fpTracking
 import (
 	"os"
 	"database/sql"
-	"bufio"
-	"strings"
+	//"bufio"
+	//"strings"
 	"log"
 	"time"
 	"math"
@@ -24,19 +24,20 @@ func (fm FingerprintManager) GetFingerprints() ([]Fingerprint, []Fingerprint) {
 	file, _ := os.Open("./data/consistent_extension_ids.csv")
 	defer file.Close()
 
-	scanner := bufio.NewScanner(file)
+	/*scanner := bufio.NewScanner(file)
 	consistentIDs := []string{"'"}
 	for scanner.Scan() {
 		consistentIDs = append(consistentIDs, scanner.Text())
 	}
 	consistentIDs = append(consistentIDs, "'")
 	consistentIDsQuery := strings.Join(consistentIDs, "','")
+	*/
 
 	fingerprints := make([]Fingerprint, 0)
 	trainFingerprints := make([]Fingerprint, 0)
 	testFingerprints := make([]Fingerprint, 0)
 
-	stmt, err := db.Prepare(`SELECT counter, id, addressHttp, creationdate, endDate,
+	/*stmt, err := db.Prepare(`SELECT counter, id, addressHttp, creationdate, endDate,
 									userAgentHttp, acceptHttp, connectionHttp, 
 									encodingHttp, languageHttp, orderHttp,
 									pluginsJS, platformJS, cookiesJS, dntJS,
@@ -48,6 +49,19 @@ func (fm FingerprintManager) GetFingerprints() ([]Fingerprint, []Fingerprint) {
 									endDate IS NOT NULL AND char_length(id) > 15
 									AND id in (` + consistentIDsQuery + `) AND id in
 									(SELECT id FROM extensionData group by id having count(*) > 6) order by counter`)
+	*/
+
+	stmt, err := db.Prepare(`SELECT counter, id, addressHttp, creationdate, endDate,
+									userAgentHttp, acceptHttp, connectionHttp, 
+									encodingHttp, languageHttp, orderHttp,
+									pluginsJS, platformJS, cookiesJS, dntJS,
+									timezoneJS, resolutionJS, localJS,
+									fontsFlash, vendorWebGLJS, rendererWebGLJS,
+									pluginsJSHashed, fontsFlashHashed, canvasJSHashed
+									FROM extensionData WHERE counter < ? AND
+									creationDate IS NOT NULL AND
+									endDate IS NOT NULL AND char_length(id) > 15
+									AND id in (SELECT id FROM extensionData group by id having count(*) > 6) order by counter`)
 
 	if err != nil {
 		panic(err.Error()) // proper error handling instead of panic in your app

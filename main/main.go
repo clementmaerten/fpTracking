@@ -42,8 +42,8 @@ func main() {
 	}*/
 	
 	fingerprintManager := fpTracking.FingerprintManager{
-		Number: 30000,
-		Train:  0.4}
+		Number: 40000,
+		Train:  0.7}
 
 	fmt.Printf("Start fetching fingerprints\n")
 	_, test := fingerprintManager.GetFingerprints()
@@ -52,9 +52,9 @@ func main() {
 	expName := "testrule1"
 	for _, visitFrequency := range visitFrequencies {
 		fileName1 := fmt.Sprintf("./results/%s_%d-res1.csv", expName, visitFrequency)
-		fmt.Println("fileName 1 : ",fileName1)
+		//fmt.Println("fileName 1 : ",fileName1)
 		fileName2 := fmt.Sprintf("./results/%s_%d-res2.csv", expName, visitFrequency)
-		fmt.Println("fileName 2 : ",fileName2)
+		//fmt.Println("fileName 2 : ",fileName2)
 		scenarioResult := fpTracking.ReplayScenario(test, visitFrequency, fpTracking.RuleBasedLinking)
 		//fmt.Printf("visitFrequency : %d, length of fps_available : %d\n",visitFrequency,len(scenarioResult))
 		//fpTracking.PrintScenarioResult(scenarioResult)

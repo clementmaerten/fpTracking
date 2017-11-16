@@ -304,6 +304,7 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
 	user_id_to_fps := make(map[string][]fingerprintLocalId)
 	counter_to_time := make(map[fingerprintLocalId]time.Time)
 
+	fmt.Println("length : ",len(replaySequence))
 	for index, elt := range replaySequence {
 		if index % 500 == 0 {
 			fmt.Println("index : ",index)
@@ -315,7 +316,7 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
 
 		//ATTENTION AU TEST SUR LE MODEL !
 		//if model == false
-		assigned_id := linkFingerprint(fingerprint_unknown, user_id_to_fps, counter_to_fingerprint) //QUESTION : user_id_to_fps non initialisé ...
+		assigned_id := linkFingerprint(fingerprint_unknown, user_id_to_fps, counter_to_fingerprint)
         
         fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
         
@@ -344,8 +345,6 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
         	}
         }
 	}
-
-	//AJOUTER L'ECRITURE DANS LE FICHIER DE RESULTAT ?
 
 	return fps_available
 }
@@ -379,7 +378,7 @@ func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprin
 	aareal_user_id_to_fps := make(map[string]int)
 
 	for _,fingerprint := range fingerprint_dataset {
-		counter_to_fingerprint[fingerprint.Counter] = fingerprint //DEJA CREE DANS D'AUTRES FONCTIONS, ON REFAIT QUAND MEME ?
+		counter_to_fingerprint[fingerprint.Counter] = fingerprint
 		real_ids = append(real_ids,fingerprint.UserID)
 		if _,is_present := aareal_user_id_to_fps[fingerprint.UserID]; !is_present {
 			aareal_user_id_to_fps[fingerprint.UserID] = 1

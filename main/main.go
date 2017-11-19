@@ -1,8 +1,9 @@
 package main
 
 import (
-	//"os"
+	"os"
 	"fmt"
+	"strconv"
 	//"log"
 	"fpTracking"
 	//"database/sql"
@@ -41,9 +42,21 @@ func main() {
 		log.Fatal(err)
 	}*/
 	
+	if len(os.Args) != 3 {
+		fmt.Println("There is no 2 parameters !")
+		os.Exit(1)
+	}
+
+	number, err1 := strconv.Atoi(os.Args[1])
+	train, err2 := strconv.ParseFloat(os.Args[2],64)
+	if (err1 != nil || err2 != nil) {
+		fmt.Println("The format is not respected !")
+		os.Exit(1)
+	}
+
 	fingerprintManager := fpTracking.FingerprintManager{
-		Number: 40000,
-		Train:  0.7}
+		Number: number,
+		Train:  train}
 
 	fmt.Printf("Start fetching fingerprints\n")
 	_, test := fingerprintManager.GetFingerprints()

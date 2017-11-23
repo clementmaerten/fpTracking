@@ -9,10 +9,10 @@ This repository contains a golang library for the algorithms which can track a f
 To use this library, you'll have to install these packages :
 
 ```
-	github.com/texttheater/golang-levenshtein/levenshtein
-	github.com/satori/go.uuid
-	github.com/avct/uasurfer
-	gopkg.in/oleiade/reflections.v1
+ github.com/texttheater/golang-levenshtein/levenshtein
+ github.com/satori/go.uuid
+ github.com/avct/uasurfer
+ gopkg.in/oleiade/reflections.v1
 ```
 
 ### Installing
@@ -21,26 +21,24 @@ For now, as the repository is private, go get function won't work. So here are t
 
  * Create the github.com/clementmaerten directory inside your go workspace
 ```
- 		$ mkdir -p $(go env GOPATH)/src/github.com/clementmaerten
+ $ mkdir -p $(go env GOPATH)/src/github.com/clementmaerten
 ```
 
  * Go inside this directory
 ```
- 		$ cd $(go env GOPATH)/src/github.com/clementmaerten
+ $ cd $(go env GOPATH)/src/github.com/clementmaerten
 ```
 
  * Then clone the repository
 ```
- 		$ git clone https://github.com/clementmaerten/fpTracking.git
-```
- 	or
-```
- 		$ git clone git@github.com:clementmaerten/fpTracking.git
+ $ git clone https://github.com/clementmaerten/fpTracking.git
+ or
+ $ git clone git@github.com:clementmaerten/fpTracking.git
 ```
 
  * Then build the library
 ```
- 		$ go build github.com/clementmaerten/fpTracking
+ $ go build github.com/clementmaerten/fpTracking
 ```
 
 Here is an example of a small program which reads into the database some fingerprints and tries to link them (here the database is mysql so it needs github.com/go-sql-driver/mysql in order to work) :

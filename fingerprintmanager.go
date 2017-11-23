@@ -10,15 +10,22 @@ import (
 	"math"
 )
 
+// Information for connection to the database
+type DBInformation struct {
+	DBType, User, Password, TCP, DBName string
+}
+
 // FingerprintManager manages the obtention of fingerprints
 type FingerprintManager struct {
 	Number int
 	Train  float64
+	DBInfo DBInformation
 }
 
 // GetFingerprints returns two slices train, test of Fingerprint structs
 func (fm FingerprintManager) GetFingerprints() ([]Fingerprint, []Fingerprint) {
-	db, _ := sql.Open("mysql", "root:mysql@/fingerprint?parseTime=true")
+	db, _ := sql.Open(fm.DBInfo.DBType,
+		fm.DBInfo.User+":"+fm.DBInfo.Password+"@"+fm.DBInfo.TCP+"/"+fm.DBInfo.DBName+"?parseTime=true")
 	defer db.Close()
 
 	file, _ := os.Open("./data/consistent_extension_ids.csv")

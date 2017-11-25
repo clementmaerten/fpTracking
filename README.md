@@ -2,22 +2,21 @@
 
 This repository contains a golang library for the algorithms which can track a fingerprint over the time. These algorithms were developped by the Spirals Team of the INRIA in Lille.
 
-## Getting started
-
+## Getting Started
 ### Prerequisites
 
-To use this library, you'll have to install these packages :
+To use this library, you'll have to install some packages :
 
 ```
- github.com/texttheater/golang-levenshtein/levenshtein
- github.com/satori/go.uuid
- github.com/avct/uasurfer
- gopkg.in/oleiade/reflections.v1
+ $ go get github.com/texttheater/golang-levenshtein/levenshtein
+ $ go get github.com/satori/go.uuid
+ $ go get github.com/avct/uasurfer
+ $ go get gopkg.in/oleiade/reflections.v1
 ```
 
 ### Installing
 
-For now, as the repository is private, go get function won't work. So here are the steps in order to install :
+For now, as the repository is private, **go get** function to get this package won't work. So here are the steps in order to install it :
 
  * Create the github.com/clementmaerten directory inside your go workspace
 ```
@@ -36,9 +35,9 @@ For now, as the repository is private, go get function won't work. So here are t
  $ git clone git@github.com:clementmaerten/fpTracking.git
 ```
 
- * Then build the library
+ * Then install the library
 ```
- $ go build github.com/clementmaerten/fpTracking
+ $ go install github.com/clementmaerten/fpTracking
 ```
 
 Here is an example of a small program which reads into the database some fingerprints and tries to link them (here the database is mysql so it needs github.com/go-sql-driver/mysql in order to work) :
@@ -63,7 +62,7 @@ func main() {
 
 	number, err1 := strconv.Atoi(os.Args[1])
 	train, err2 := strconv.ParseFloat(os.Args[2],64)
-	if (err1 != nil || err2 != nil) {
+	if (err1 != nil || err2 != nil || train < 0 || train > 1) {
 		fmt.Println("The format is not respected !")
 		os.Exit(1)
 	}

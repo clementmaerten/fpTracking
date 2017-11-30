@@ -222,6 +222,14 @@ type sequenceElt struct {
 }
 
 func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int) []sequenceElt {
+
+	/*
+		Takes as input a set of fingerprint fingerprintDataset,
+		a frequency of visit visit_frequency in days.
+
+		Returns a list of fingerprints in the order they must be replayed
+	*/
+
 	userIDToFingerprints := make(map[string][]Fingerprint)
 	for _, fingerprint := range fingerprintDataset {
 		userIDToFingerprints[fingerprint.UserID] = append(userIDToFingerprints[fingerprint.UserID], fingerprint)
@@ -326,7 +334,7 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
         if index % 2000 == 0 {
         	//30 days in seconds
         	time_limit := float64(30*24*60*60)
-        	var ids_to_remove []string
+        	ids_to_remove := NewStringSet()
         	current_time := elt.lastVisit
         	for user_id,fp_local_id_list := range user_id_to_fps {
         		index_last_element := len(fp_local_id_list)-1
@@ -334,12 +342,12 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
         			fp_local_id := fp_local_id_list[index_last_element]
         			time_tmp := counter_to_time[fp_local_id]
         			if current_time.Sub(time_tmp).Seconds() > time_limit {
-        				ids_to_remove = append(ids_to_remove,user_id)
+        				ids_to_remove.Add(user_id)
         			}
         		}
         	}
-        	for _,user_id := range ids_to_remove {
-        		user_id_to_fps[user_id] = []fingerprintLocalId{}
+        	for user_id,_ := range ids_to_remove.GetSet() {
+        		delete(user_id_to_fps,user_id)
         	}
         }
 	}
@@ -372,15 +380,12 @@ func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprin
 
 	counter_to_fingerprint := make(map[int]Fingerprint)
 	real_user_id_to_nb_fps := make(map[string]int)
-	real_ids := NewStringSet()
 
 	for _,fingerprint := range fingerprint_dataset {
 		counter_to_fingerprint[fingerprint.Counter] = fingerprint
-		real_ids.Add(fingerprint.UserID)
 	}
 
 	//We map new assigned ids to real ids in database
-	assigned_ids := NewStringSet()
 	real_id_to_assigned_ids := make(map[string]*StringSet)
 	assigned_id_to_real_ids := make(map[string]*StringSet)
 	assigned_id_to_fingerprints := make(map[string][]Fingerprint)
@@ -388,7 +393,6 @@ func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprin
 	for _,elt := range scenario_result {
 		counter := elt.fp_local_id.counter
 		assigned_id := elt.assigned_id
-		assigned_ids.Add(assigned_id)
 		real_db_id := counter_to_fingerprint[counter].UserID
 		if _,is_present := real_user_id_to_nb_fps[real_db_id]; !is_present {
 			real_user_id_to_nb_fps[real_db_id] = 1

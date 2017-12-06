@@ -153,34 +153,12 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
 		}
     }
     if len(exact_matching) > 0 {
-    	if len(exact_matching) == 1 || candidates_have_same_id(exact_matching) {
+    	if candidates_have_same_id(exact_matching) {
     		return exact_matching[0].user_id
-    	} else if ip_allowed {
-    		//We look if same IP address
-    		for _,elt := range exact_matching {
-    			counter_known := elt.fp_local_id.counter
-    			fingerprint_known := counter_to_fingerprint[counter_known]
-
-    			if fingerprint_known.AddressHTTP == fingerprint_unknown.AddressHTTP {
-    				prediction = elt.user_id
-    				break
-    			}
-    		}
     	}
     } else {
-    	if len(candidates) == 1 || candidates_have_same_id(candidates) {
+    	if candidates_have_same_id(candidates) {
     		prediction = candidates[0].user_id
-    	} else if ip_allowed {
-    		//first pass with ip address
-    		for _,elt := range candidates {
-    			counter_known := elt.fp_local_id.counter
-    			fingerprint_known := counter_to_fingerprint[counter_known]
-
-    			if fingerprint_known.AddressHTTP == fingerprint_unknown.AddressHTTP {
-    				prediction = elt.user_id
-    				break
-    			}
-    		}
     	}
     }
 

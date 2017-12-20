@@ -6,7 +6,7 @@ import (
 	"time"
 	"os"
 	//"github.com/texttheater/golang-levenshtein/levenshtein"
-	"gopkg.in/oleiade/reflections.v1"
+	//"gopkg.in/oleiade/reflections.v1"
 	"github.com/satori/go.uuid"
 	"github.com/xrash/smetrics"
 )
@@ -73,9 +73,9 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
         otherwise it returns a new generated user id.
     */
     
-    forbidden_changes := []string {"CanvasHashed","Local","Dnt","Cookies"}
-    allowed_changes_with_sim := []string{"UserAgent","Vendor","Renderer","Plugins","Language","Accept"}
-    allowed_changes := []string{"Resolution","Encoding","Timezone"}
+    //forbidden_changes := []string {"CanvasHashed","Local","Dnt","Cookies"}
+    //allowed_changes_with_sim := []string{"UserAgent","Vendor","Renderer","Plugins","Language","Accept"}
+    //allowed_changes := []string{"Resolution","Encoding","Timezone"}
 
     var candidates []matching
     var exact_matching []matching
@@ -103,8 +103,14 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
 				}
 
 				//Forbidden changes :
-				//We check all attributes in forbidden_changes
-				forbidden_change_found := false
+				if fingerprint_known.CanvasHashed != fingerprint_unknown.CanvasHashed ||
+					fingerprint_known.Local != fingerprint_unknown.Local ||
+					fingerprint_known.Dnt != fingerprint_unknown.Dnt ||
+					fingerprint_known.Cookies != fingerprint_unknown.Cookies {
+						continue
+				}
+
+				/*forbidden_change_found := false
 				for _,attribute := range forbidden_changes {
 					value_known, err1 := reflections.GetField(fingerprint_known,attribute)
 					value_unknown, err2 := reflections.GetField(fingerprint_unknown,attribute)
@@ -119,12 +125,68 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
 				}
 				if forbidden_change_found {
 					continue
-				}
+				}*/
 
 				//Allowed changes :
 				//We check all attributes in allowed_changes_with_sim
 				nb_changes := 0
-				var changes []string
+
+				if fingerprint_known.UserAgent != fingerprint_unknown.UserAgent {
+					nb_changes ++
+					if smetrics.JaroWinkler(fingerprint_known.UserAgent,fingerprint_unknown.UserAgent, 0.7, 4) < 0.75 {
+						continue
+					}
+				}
+
+				if fingerprint_known.Vendor != fingerprint_unknown.Vendor {
+					nb_changes ++
+					if smetrics.JaroWinkler(fingerprint_known.Vendor,fingerprint_unknown.Vendor, 0.7, 4) < 0.75 {
+						continue
+					}
+				}
+
+				if fingerprint_known.Renderer != fingerprint_unknown.Renderer {
+					nb_changes ++
+					if smetrics.JaroWinkler(fingerprint_known.Renderer,fingerprint_unknown.Renderer, 0.7, 4) < 0.75 {
+						continue
+					}
+				}
+
+				if nb_changes > 2 {
+					continue
+				}
+				if fingerprint_known.Plugins != fingerprint_unknown.Plugins {
+					nb_changes ++
+					if smetrics.JaroWinkler(fingerprint_known.Plugins,fingerprint_unknown.Plugins, 0.7, 4) < 0.75 {
+						continue
+					}
+				}
+
+				if nb_changes > 2 {
+					continue
+				}
+				if fingerprint_known.Language != fingerprint_unknown.Language {
+					nb_changes ++
+					if smetrics.JaroWinkler(fingerprint_known.Language,fingerprint_unknown.Language, 0.7, 4) < 0.75 {
+						continue
+					}
+				}
+
+				if nb_changes > 2 {
+					continue
+				}
+				if fingerprint_known.Accept != fingerprint_unknown.Accept {
+					nb_changes ++
+					if smetrics.JaroWinkler(fingerprint_known.Accept,fingerprint_unknown.Accept, 0.7, 4) < 0.75 {
+						continue
+					}
+				}
+
+				if nb_changes > 2 {
+					continue
+				}
+
+				/*var changes []string
 				//we allow at most 2 changes, then we check for similarity
 				for _,attribute := range allowed_changes_with_sim {
 					value_known, err1 := reflections.GetField(fingerprint_known,attribute)
@@ -161,10 +223,30 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
 				}
 				if sim_too_low {
 					continue
-				}
+				}*/
 
 				nb_allowed_changes := 0
-				for _,attribute := range allowed_changes {
+
+				if fingerprint_known.Resolution != fingerprint_unknown.Resolution {
+					nb_allowed_changes ++
+				}
+
+				if fingerprint_known.Encoding != fingerprint_unknown.Encoding {
+					nb_allowed_changes ++
+				}
+
+				if nb_allowed_changes > 1 {
+					continue
+				}
+				if fingerprint_known.Timezone != fingerprint_unknown.Timezone {
+					nb_allowed_changes ++
+				}
+
+				if nb_allowed_changes > 1 {
+					continue
+				}
+
+				/*for _,attribute := range allowed_changes {
 					value_known, err1 := reflections.GetField(fingerprint_known,attribute)
 					value_unknown, err2 := reflections.GetField(fingerprint_unknown,attribute)
 					if err1 != nil || err2 != nil {
@@ -181,7 +263,7 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
 				}
 				if nb_allowed_changes > 1 {
 					continue
-				}
+				}*/
 
 				total_nb_changes := nb_allowed_changes + nb_changes
 				if total_nb_changes == 0 {

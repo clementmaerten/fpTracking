@@ -36,7 +36,6 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
     allowed_changes_with_sim := []string{"UserAgent","Vendor","Renderer","Plugins","Language","Accept"}
     allowed_changes := []string{"Resolution","Encoding","Timezone"}
 
-    ip_allowed := false
     var candidates []matching
     var exact_matching []matching
     var prediction string

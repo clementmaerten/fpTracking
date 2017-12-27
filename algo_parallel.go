@@ -19,19 +19,25 @@ type osBrowserCombination struct {
 
 func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) string, request <- chan message, answer chan <- message) {
 
-	user_id_to_fps := make(map[string][]fingerprintLocalId)
+	//user_id_to_fps := make(map[string][]fingerprintLocalId)
 	counter_to_time := make(map[fingerprintLocalId]time.Time)
 	counter_to_fingerprint := make(map[int]Fingerprint)
 
-	os_browser_to_fps := make(map[osBrowserCombination][]fingerprintLocalId)
+	os_browser_to_fps := make(map[osBrowserCombination]map[string][]fingerprintLocalId)
+
 
 	for {
 		rq := <- request
 		if strings.Compare(rq.task,"link") == 0 {
 			
 			counter_to_time[rq.elt.fp_local_id] = rq.elt.lastVisit
+			counter_to_fingerprint[rq.elt.fp_local_id.counter] = rq.fp
+			
+			//We only compare to fingerprints which as the same os and same browser as the  unknown fingerprint
+			os_browser_combination := osBrowserCombination{os : rq.fp.OS, browser : rq.fp.Browser}
 
-			assigned_id := linkFingerprint(rq.fr, user_id_to_fps, counter_to_fingerprint)
+
+			assigned_id := linkFingerprint(rq.fp, os_browser_to_fps[os_browser_combination], counter_to_fingerprint)
 
 
 
@@ -54,7 +60,9 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
     goroutines_number := 4
 
     request := make(chan message)
+    defer close(request)
     answer := make(chan message)
+    defer close(answer)
 
     for i := 0; i < goroutines_number; i++ {
     	go parallelLinking(i, linkFingerprint, request, answer)
@@ -116,10 +124,6 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
         	}
         }
 	}
-
-	//we close the channels
-	close(request)
-	close(answer)
 
 	return fps_available
 }

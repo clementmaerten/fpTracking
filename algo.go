@@ -5,9 +5,10 @@ import (
 	"sort"
 	"time"
 	"os"
-	"github.com/texttheater/golang-levenshtein/levenshtein"
+	//"github.com/texttheater/golang-levenshtein/levenshtein"
 	"gopkg.in/oleiade/reflections.v1"
 	"github.com/satori/go.uuid"
+	"github.com/xrash/smetrics"
 )
 
 type fingerprintLocalId struct {
@@ -19,6 +20,46 @@ type matching struct {
 	fp_local_id fingerprintLocalId
 	nb_changes int
 	user_id string
+}
+
+
+func LevenshteinDistance(a, b *string) int {
+	la := len(*a)
+	lb := len(*b)
+	d := make([]int, la+1)
+	var lastdiag, olddiag, temp int
+
+	for i := 1; i <= la; i++ {
+		d[i] = i
+	}
+	for i := 1; i <= lb; i++ {
+		d[0] = i
+		lastdiag = i - 1
+		for j := 1; j <= la; j++ {
+			olddiag = d[j]
+			min := d[j] + 1
+			if (d[j-1] + 1) < min {
+				min = d[j-1] + 1
+			}
+			if (*a)[j-1] == (*b)[i-1] {
+				temp = 0
+			} else {
+				temp = 1
+			}
+			if (lastdiag + temp) < min {
+				min = lastdiag + temp
+			}
+			d[j] = min
+			lastdiag = olddiag
+		}
+	}
+	return d[la]
+}
+
+func LevenshteinRatio(a, b string) float64 {
+	//(sourceLength + targetLength - distance) / (sourceLength + targetLength)
+	totalLength := float64(len(a) + len(b))
+	return (totalLength - float64(LevenshteinDistance(&a,&b)))/totalLength
 }
 
 func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string][]fingerprintLocalId, counter_to_fingerprint map[int]Fingerprint) string{
@@ -112,7 +153,7 @@ func RuleBasedLinking(fingerprint_unknown Fingerprint, user_id_to_fps map[string
 					if err1 != nil || err2 != nil {
 						fmt.Printf("Erreur dans les attributs de changes\n")
 					} else {
-						if levenshtein.RatioForStrings([]rune(value_known.(string)),[]rune(value_unknown.(string)),levenshtein.DefaultOptions) < 0.75 {
+						if smetrics.JaroWinkler(value_known.(string), value_unknown.(string), 0.7, 4) < 0.75 {
 							sim_too_low = true
 							break
 						}

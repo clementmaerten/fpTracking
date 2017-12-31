@@ -161,13 +161,11 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 		}
 	}
 
-	prediction := generate_new_id()
-
 	if conflictPresent {
-		return CONFLICT, prediction
-	} else {
-		return NOT_FOUND, prediction
+		return CONFLICT, generate_new_id()
 	}
+
+	return NOT_FOUND, generate_new_id()
 }
 
 
@@ -216,7 +214,7 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 }
 
 
-func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) string) []counter_and_assigned_id {
+func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) string, goroutines_number int) []counter_and_assigned_id {
 
 	/*
 		Takes as input the fingerprint dataset,
@@ -225,16 +223,14 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
         filename, path to the file to save results of the scenario
 	*/
 
-    goroutines_number := 4
+	request := make(chan message)
+	defer close(request)
+	answer := make(chan message)
+	defer close(answer)
 
-    request := make(chan message)
-    defer close(request)
-    answer := make(chan message)
-    defer close(answer)
-
-    for i := 0; i < goroutines_number; i++ {
-    	go parallelLinking(i, linkFingerprint, request, answer)
-    }
+	for i := 0; i < goroutines_number; i++ {
+		go parallelLinking(i, linkFingerprint, request, answer)
+	}
 
 
 	nb_max_cmp := 2
@@ -255,6 +251,8 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		counter := elt.fp_local_id.counter
 		fingerprint_unknown := counter_to_fingerprint[counter]
 
+
+		//We send to all goroutines the instruction to try to link the fingerprint
 		for i := 0; i < goroutines_number; i++ {
 			request <- message{task : LINK,elt : elt, fp : fingerprint_unknown}
 		}

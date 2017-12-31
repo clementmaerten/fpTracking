@@ -30,7 +30,6 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 
     var candidates []matching
     var exact_matching []matching
-    var prediction string
 
     for user_id, fp_local_id_list := range user_id_to_fps {
 		for _, fp_local_id := range fp_local_id_list {
@@ -144,33 +143,31 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 		}
     }
 
-    conflictPresent := false
+	conflictPresent := false
 
-    if len(exact_matching) > 0 {
-    	if candidates_have_same_id(exact_matching) {
-    		return FOUND, exact_matching[0].user_id
-    	} else {
-    		//There is a conflict
-    		conflictPresent = true
-    	}
-    } else if len(candidates) > 0 {
-    	if candidates_have_same_id(candidates) {
-    		return FOUND, candidates[0].user_id
-    	} else {
-    		//There is a conflict
-    		conflictPresent = true
-    	}
-    }
+	if len(exact_matching) > 0 {
+		if candidates_have_same_id(exact_matching) {
+			return FOUND, exact_matching[0].user_id
+		} else {
+			//There is a conflict
+			conflictPresent = true
+		}
+	} else if len(candidates) > 0 {
+		if candidates_have_same_id(candidates) {
+			return FOUND, candidates[0].user_id
+		} else {
+			//There is a conflict
+			conflictPresent = true
+		}
+	}
 
-    if prediction == "" {
-    	prediction = generate_new_id()
-    }
+	prediction := generate_new_id()
 
-    if conflictPresent {
+	if conflictPresent {
 		return CONFLICT, prediction
-    } else {
-    	return NOT_FOUND, prediction
-    }
+	} else {
+		return NOT_FOUND, prediction
+	}
 }
 
 
@@ -208,7 +205,7 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 			os_browser_combination := osBrowserCombination{os : rq.fp.OS, browser : rq.fp.Browser}
 
 
-			assigned_id := linkFingerprint(rq.fp, os_browser_to_fps[os_browser_combination], counter_to_fingerprint)
+			result, assigned_id := linkFingerprint(rq.fp, os_browser_to_fps[os_browser_combination], counter_to_fingerprint)
 
 
 

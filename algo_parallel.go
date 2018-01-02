@@ -3,6 +3,7 @@ package fpTracking
 import (
 	"fmt"
 	"time"
+	"math/rand"
 	"strings"
 	"gopkg.in/oleiade/reflections.v1"
 	"github.com/xrash/smetrics"
@@ -174,12 +175,14 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 //Definition of constants for the tasks in the messages
 const LINK = "link"
 const LINK_ANSWER = "link_answer"
+const TAKE_NOTE_OF_DECISION = "tnod"
 
 type message struct {
 	task string
 	elt sequenceElt
 	fp Fingerprint
 	result int
+	assigned_id string
 	goroutine_id int
 }
 
@@ -192,11 +195,14 @@ type osBrowserCombination struct {
 func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), request <- chan message, answer chan <- message) {
 
 	//user_id_to_fps := make(map[string][]fingerprintLocalId)
+	nb_max_cmp := 2
 	counter_to_time := make(map[fingerprintLocalId]time.Time)
 	counter_to_fingerprint := make(map[int]Fingerprint)
 
 	os_browser_to_fps := make(map[osBrowserCombination]map[string][]fingerprintLocalId)
 
+	var os_browser_combination osBrowserCombination
+	var fp_local_id fingerprintLocalId
 	result := -1
 	assigned_id := ""
 
@@ -204,11 +210,12 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 		rq := <- request
 		if strings.Compare(rq.task,LINK) == 0 {
 			
-			counter_to_time[rq.elt.fp_local_id] = rq.elt.lastVisit
-			counter_to_fingerprint[rq.elt.fp_local_id.counter] = rq.fp
+			fp_local_id = rq.elt.fp_local_id
+			counter_to_time[fp_local_id] = rq.elt.lastVisit
+			counter_to_fingerprint[fp_local_id.counter] = rq.fp
 			
 			//We only compare to fingerprints which as the same os and same browser as the  unknown fingerprint
-			os_browser_combination := osBrowserCombination{os : rq.fp.OS, browser : rq.fp.Browser}
+			os_browser_combination = osBrowserCombination{os : rq.fp.OS, browser : rq.fp.Browser}
 
 
 			result, assigned_id = linkFingerprint(rq.fp, os_browser_to_fps[os_browser_combination], counter_to_fingerprint)
@@ -217,9 +224,23 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 			answer <- message {
 				task : LINK_ANSWER,
 				result : result,
+				assigned_id : assigned_id,
 				goroutine_id : id,
 			}
+		} else if strings.Compare(rq.task,TAKE_NOTE_OF_DECISION) == 0 {
 
+			//We look if the current goroutine is the one selected by the master
+			//if true, we store the fingerprint to keep it for next iterations
+			//else, we do nothing
+			if rq.goroutine_id == id {
+
+				if len(os_browser_to_fps[os_browser_combination][assigned_id]) == nb_max_cmp {
+        			//pop the first element
+        			os_browser_to_fps[os_browser_combination][assigned_id] = os_browser_to_fps[os_browser_combination][assigned_id][1:]
+        		}
+
+        		os_browser_to_fps[os_browser_combination][assigned_id] = append(os_browser_to_fps[os_browser_combination][assigned_id],fp_local_id)
+			}
 		} else {
 			fmt.Println("Wrong task for goroutine",id)
 		}
@@ -246,7 +267,6 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	}
 
 
-	//nb_max_cmp := 2
 	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
 	counter_to_fingerprint := make(map[int]Fingerprint)
 	for _,fingerprint := range fingerprintDataset {
@@ -290,22 +310,21 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		}
 
 		//Now, we take a decision
-		if conflictPresent {
-
-		} else if found_count > 1 {
-
-		} else if found_count == 1 {
-
-		} else {
-
+		if conflictPresent || found_count > 1 || found_count < 1 {
+			chosen_goroutine_id = random_between_range(0,goroutines_number - 1)
 		}
 
+		assigned_id := assigned_id_from_goroutine(answers, chosen_goroutine_id)
 
-		
+		//We send the decision to all the goroutines
+		for i := 0; i < goroutines_number; i++ {
+			request <- message{task : TAKE_NOTE_OF_DECISION, goroutine_id : chosen_goroutine_id}
+		}
+
         
-        /*fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
+        fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
         
-        if len(user_id_to_fps[assigned_id]) == nb_max_cmp {
+        /*if len(user_id_to_fps[assigned_id]) == nb_max_cmp {
         	//pop the first element
         	user_id_to_fps[assigned_id] = user_id_to_fps[assigned_id][1:]
         }
@@ -337,3 +356,18 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	return fps_available
 }
 
+func random_between_range (min, max int) int {
+	rand.Seed(time.Now().UTC().UnixNano())
+	return rand.Intn(max + 1 - min) + min
+}
+
+func assigned_id_from_goroutine (answers []message, id int) string {
+	for _, answer := range answers {
+		if answer.goroutine_id == id {
+			return answer.assigned_id
+		}
+	}
+	//This should never happen
+	fmt.Println("Error in assigned_id_from_goroutine")
+	return ""
+}

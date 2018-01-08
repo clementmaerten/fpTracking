@@ -300,6 +300,10 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		go parallelLinking(i, linkFingerprint, request, answer, &w)
 	}
 
+	var number_of_fingerprints_per_goroutine []int
+	for i := 0; i < goroutines_number; i++ {
+		number_of_fingerprints_per_goroutine = append(number_of_fingerprints_per_goroutine,0)
+	}
 
 	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
 	counter_to_fingerprint := make(map[int]Fingerprint)
@@ -348,9 +352,11 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 
 		//Now, we take a decision
 		if conflictPresent || found_count > 1 || found_count < 1 {
-			chosen_goroutine_id = random_between_range(0,goroutines_number - 1)
+			chosen_goroutine_id = min_index_in_int_slice(number_of_fingerprints_per_goroutine)
 		}
 		//fmt.Println("After decision, chosen_goroutine_id :",chosen_goroutine_id)
+
+		number_of_fingerprints_per_goroutine[chosen_goroutine_id] += 1
 
 		assigned_id := assigned_id_from_goroutine(answers, chosen_goroutine_id)
 		//fmt.Println("So, assigned_id :",assigned_id)
@@ -398,7 +404,23 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	}
 	//fmt.Println("All the goroutines are closed")
 	//os.Exit(0)
+	fmt.Println("number_of_fingerprints_per_goroutine :",number_of_fingerprints_per_goroutine)
 	return fps_available
+}
+
+func min_index_in_int_slice (slice []int) int {
+	length := len(slice)
+	min := slice[0]
+	min_index := 0
+
+	for i := 1; i < length; i++ {
+		if slice[i] < min {
+			min = slice[i]
+			min_index = i
+		}
+	}
+
+	return min_index
 }
 
 func random_between_range (min, max int) int {

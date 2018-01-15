@@ -13,9 +13,10 @@ import (
 
 
 //Definition of constants for the RuleBased results
-const FOUND = 0
-const CONFLICT = 1
-const NOT_FOUND = 2
+const EXACT_FOUND = 0
+const CANDIDATE_FOUND = 1
+const CONFLICT = 2
+const NOT_FOUND = 3
 
 
 func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps map[string][]fingerprintLocalId, counter_to_fingerprint map[int]Fingerprint) (int,string){
@@ -152,14 +153,14 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 
 	if len(exact_matching) > 0 {
 		if candidates_have_same_id(exact_matching) {
-			return FOUND, exact_matching[0].user_id
+			return EXACT_FOUND, exact_matching[0].user_id
 		} else {
 			//There is a conflict
 			conflictPresent = true
 		}
 	} else if len(candidates) > 0 {
 		if candidates_have_same_id(candidates) {
-			return FOUND, candidates[0].user_id
+			return CANDIDATE_FOUND, candidates[0].user_id
 		} else {
 			//There is a conflict
 			conflictPresent = true
@@ -333,25 +334,31 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		//we also look for conflicts, the number of "FOUND" answers ...
 		var answers []message
 		conflictPresent := false
-		found_count := 0
+		candidate_found_count := 0
 		chosen_goroutine_id := -1
+		is_exact_found_present := false
 		for i := 0; i < goroutines_number; i++ {
 			//This list will be ordered by the order of answer messages
 			msg := <-answer
 			answers = append(answers,msg)
 
-			if msg.result == CONFLICT {
-				conflictPresent = true
-			} else if msg.result == FOUND {
-				found_count += 1
+			if msg.result == EXACT_FOUND {
 				chosen_goroutine_id = msg.goroutine_id
-			}
+				is_exact_found_present = true
+			} else if msg.result == CANDIDATE_FOUND {
+				candidate_found_count += 1
+				if !is_exact_found_present {
+					chosen_goroutine_id = msg.goroutine_id
+				}
+			} else if msg.result == CONFLICT {
+				conflictPresent = true
+			} 
 		}
 		//fmt.Println("All answers from goroutines were read by master")
-		//fmt.Println("conflictPresent :",conflictPresent,"found_count :",found_count, "chosen_goroutine_id",chosen_goroutine_id)
+		//fmt.Println("conflictPresent :",conflictPresent,"candidate_found_count :",candidate_found_count, "chosen_goroutine_id",chosen_goroutine_id)
 
 		//Now, we take a decision
-		if conflictPresent || found_count > 1 || found_count < 1 {
+		if !is_exact_found_present && (conflictPresent || candidate_found_count > 1 || candidate_found_count < 1) {
 			chosen_goroutine_id = min_index_in_int_slice(number_of_fingerprints_per_goroutine)
 		}
 		//fmt.Println("After decision, chosen_goroutine_id :",chosen_goroutine_id)

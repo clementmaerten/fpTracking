@@ -231,7 +231,8 @@ func candidates_have_same_id(candidate_list []matching) bool {
 }
 
 func generate_new_id() string {
-	return fmt.Sprintf("%s",uuid.NewV4())
+	gen, _ := uuid.NewV4()
+	return fmt.Sprintf("%s",gen)
 }
 
 type sequenceElt struct {

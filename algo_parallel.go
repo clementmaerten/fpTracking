@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"os"
 	"time"
-	"math/rand"
 	"strings"
-	"sync"
+	//"sync"
 	"gopkg.in/oleiade/reflections.v1"
 	"github.com/xrash/smetrics"
 )
@@ -178,7 +177,8 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 //Definition of constants for the tasks in the messages
 const LINK = "link"
 const LINK_ANSWER = "link_answer"
-const TAKE_NOTE_OF_DECISION = "tnod"
+const ASSIGNED_ID_ACCEPTED = "acc"
+const ASSIGNED_ID_NOT_ACCEPTED = "not_acc"
 const CLOSE_GOROUTINE = "cg"
 
 type message struct {
@@ -196,7 +196,7 @@ type osBrowserCombination struct {
 }
 
 //Function executed by goroutines
-func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), request <- chan message, answer chan <- message, w *sync.WaitGroup) {
+func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), ch chan message) {
 
 	//user_id_to_fps := make(map[string][]fingerprintLocalId)
 	//fmt.Println("TEST : initialisation goroutine",id)
@@ -212,7 +212,7 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 	assigned_id := ""
 
 	for {
-		rq := <- request
+		rq := <- ch
 		if strings.Compare(rq.task,LINK) == 0 {
 			
 			fp_local_id = rq.elt.fp_local_id
@@ -235,36 +235,29 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 				TEST_message.result," assigned_id :",TEST_message.assigned_id, " goroutine_id :",TEST_message.goroutine_id)*/
 
 			//We send the answer to the master goroutine
-			answer <- message {
+			ch <- message {
 				task : LINK_ANSWER,
 				result : result,
 				assigned_id : assigned_id,
 				goroutine_id : id,
 			}
-		} else if strings.Compare(rq.task,TAKE_NOTE_OF_DECISION) == 0 {
+		} else if strings.Compare(rq.task,ASSIGNED_ID_ACCEPTED) == 0 {
 
-			//We look if the current goroutine is the one selected by the master
-			//if true, we store the fingerprint to keep it for next iterations
-			//else, we do nothing
-			if rq.goroutine_id == id {
-				//fmt.Println("goroutine",id,"takes note of decision")
-				//fmt.Println("same combination ? ",os_browser_combination)
-				if len(os_browser_to_fps[os_browser_combination][assigned_id]) == nb_max_cmp {
-        			//pop the first element
-        			os_browser_to_fps[os_browser_combination][assigned_id] = os_browser_to_fps[os_browser_combination][assigned_id][1:]
-        		}
+			//We store the fingerprint to keep it for next iterations
+			//fmt.Println("goroutine",id,"takes note of decision")
+			//fmt.Println("same combination ? ",os_browser_combination)
+			if len(os_browser_to_fps[os_browser_combination][assigned_id]) == nb_max_cmp {
+    			//pop the first element
+    			os_browser_to_fps[os_browser_combination][assigned_id] = os_browser_to_fps[os_browser_combination][assigned_id][1:]
+    		}
 
-        		if os_browser_to_fps[os_browser_combination] == nil {
-        			os_browser_to_fps[os_browser_combination] = make(map[string][]fingerprintLocalId)
-        		}
-        		os_browser_to_fps[os_browser_combination][assigned_id] = append(os_browser_to_fps[os_browser_combination][assigned_id],fp_local_id)
-			} /*else {fmt.Println("goroutine",id,"does NOT take note of decision")}*/
+    		if os_browser_to_fps[os_browser_combination] == nil {
+    			os_browser_to_fps[os_browser_combination] = make(map[string][]fingerprintLocalId)
+    		}
+    		os_browser_to_fps[os_browser_combination][assigned_id] = append(os_browser_to_fps[os_browser_combination][assigned_id],fp_local_id)
 
-			//goroutine wait for the other to finish
-			w.Done()
-			//fmt.Println("goroutine",id," has finished and is waiting for others ...")
-			w.Wait()
-			//fmt.Println("goroutine",id," is unlocked !")
+		} else if strings.Compare(rq.task,ASSIGNED_ID_NOT_ACCEPTED) == 0 {
+			//We do nothing
 
 		} else if strings.Compare(rq.task,CLOSE_GOROUTINE) == 0 {
 
@@ -272,6 +265,7 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 			return
 
 		} else {
+			//This case should never happen
 			fmt.Println("Wrong task for goroutine",id,": task",rq.task)
 			os.Exit(1)
 		}
@@ -288,19 +282,20 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
         filename, path to the file to save results of the scenario
 	*/
 
-	request := make(chan message)
-	defer close(request)
-	answer := make(chan message)
-	defer close(answer)
-
-	var w sync.WaitGroup
 
 	//fmt.Println("TEST : nombre de goroutines :",goroutines_number)
 
+	//we store all the channels into a slice of channels
+	var channels []chan message
+
 	for i := 0; i < goroutines_number; i++ {
-		go parallelLinking(i, linkFingerprint, request, answer, &w)
+		ch := make(chan message)
+		defer close(ch)
+		channels = append(channels,ch)
+		go parallelLinking(i, linkFingerprint, ch)
 	}
 
+	//we keep the number of fingerprints remembered by each goroutine
 	var number_of_fingerprints_per_goroutine []int
 	for i := 0; i < goroutines_number; i++ {
 		number_of_fingerprints_per_goroutine = append(number_of_fingerprints_per_goroutine,0)
@@ -326,31 +321,31 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 
 		//We send to all goroutines the instruction to try to link the fingerprint
 		for i := 0; i < goroutines_number; i++ {
-			request <- message{task : LINK,elt : elt, fp : fingerprint_unknown}
+			channels[i] <- message{task : LINK,elt : elt, fp : fingerprint_unknown}
 		}
 		//fmt.Println("All the request were read by goroutines")
 
 		//We wait for the answers and we save them
-		//we also look for conflicts, the number of "FOUND" answers ...
-		var answers []message
+		answers := make([]message,goroutines_number)
+		for i := 0; i < goroutines_number; i++ {
+			answers[i] = <- channels[i]
+		}
+
+		//we look at the conflicts to take a decision
 		conflictPresent := false
 		candidate_found_count := 0
 		chosen_goroutine_id := -1
-		is_exact_found_present := false
+		exactFoundPresent := false
 		for i := 0; i < goroutines_number; i++ {
-			//This list will be ordered by the order of answer messages
-			msg := <-answer
-			answers = append(answers,msg)
-
-			if msg.result == EXACT_FOUND {
-				chosen_goroutine_id = msg.goroutine_id
-				is_exact_found_present = true
-			} else if msg.result == CANDIDATE_FOUND {
+			if answers[i].result == EXACT_FOUND {
+				chosen_goroutine_id = answers[i].goroutine_id
+				exactFoundPresent = true
+			} else if answers[i].result == CANDIDATE_FOUND {
 				candidate_found_count += 1
-				if !is_exact_found_present {
-					chosen_goroutine_id = msg.goroutine_id
+				if !exactFoundPresent {
+					chosen_goroutine_id = answers[i].goroutine_id
 				}
-			} else if msg.result == CONFLICT {
+			} else if answers[i].result == CONFLICT {
 				conflictPresent = true
 			} 
 		}
@@ -358,7 +353,7 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		//fmt.Println("conflictPresent :",conflictPresent,"candidate_found_count :",candidate_found_count, "chosen_goroutine_id",chosen_goroutine_id)
 
 		//Now, we take a decision
-		if !is_exact_found_present && (conflictPresent || candidate_found_count > 1 || candidate_found_count < 1) {
+		if !exactFoundPresent && (conflictPresent || candidate_found_count > 1 || candidate_found_count < 1) {
 			chosen_goroutine_id = min_index_in_int_slice(number_of_fingerprints_per_goroutine)
 		}
 		//fmt.Println("After decision, chosen_goroutine_id :",chosen_goroutine_id)
@@ -368,18 +363,17 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		assigned_id := assigned_id_from_goroutine(answers, chosen_goroutine_id)
 		//fmt.Println("So, assigned_id :",assigned_id)
 
-		//We send the decision to all the goroutines
-		w.Add(goroutines_number)
+		//We send the decision to the goroutines
 		for i := 0; i < goroutines_number; i++ {
-			request <- message{task : TAKE_NOTE_OF_DECISION, goroutine_id : chosen_goroutine_id}
+			if i == chosen_goroutine_id {
+				channels[i] <- message{task : ASSIGNED_ID_ACCEPTED}
+			} else {
+				channels[i] <- message{task : ASSIGNED_ID_NOT_ACCEPTED}
+			}
 		}
 
         
         fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
-
-        //fmt.Println("We Wait for the goroutines to finish")
-        w.Wait()
-        //fmt.Println("Master unlocked !")
         
 
         /*every 2000 elements we delete elements too old
@@ -407,7 +401,7 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	//fmt.Println("End of ReplayScenarioParallel function")
 	//fmt.Println("Closing goroutines ...")
 	for i := 0; i < goroutines_number; i++ {
-		request <- message{task : CLOSE_GOROUTINE}
+		channels[i] <- message{task : CLOSE_GOROUTINE}
 	}
 	//fmt.Println("All the goroutines are closed")
 	//os.Exit(0)
@@ -428,11 +422,6 @@ func min_index_in_int_slice (slice []int) int {
 	}
 
 	return min_index
-}
-
-func random_between_range (min, max int) int {
-	rand.Seed(time.Now().UTC().UnixNano())
-	return rand.Intn(max + 1 - min) + min
 }
 
 func assigned_id_from_goroutine (answers []message, id int) string {

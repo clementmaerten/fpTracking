@@ -5,7 +5,6 @@ import (
 	"os"
 	"time"
 	"strings"
-	//"sync"
 	"gopkg.in/oleiade/reflections.v1"
 	"github.com/xrash/smetrics"
 )
@@ -198,8 +197,6 @@ type osBrowserCombination struct {
 //Function executed by goroutines
 func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), ch chan message) {
 
-	//user_id_to_fps := make(map[string][]fingerprintLocalId)
-	//fmt.Println("TEST : initialisation goroutine",id)
 	nb_max_cmp := 2
 	counter_to_time := make(map[fingerprintLocalId]time.Time)
 	counter_to_fingerprint := make(map[int]Fingerprint)
@@ -224,17 +221,8 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 			
 			//We only compare to fingerprints which as the same os and same browser as the  unknown fingerprint
 			os_browser_combination = osBrowserCombination{os : rq.fp.OS, browser : rq.fp.Browser}
-			//fmt.Println("goroutine",id,": combination :",os_browser_combination)
 
 			result, assigned_id = linkFingerprint(rq.fp, os_browser_to_fps[os_browser_combination], counter_to_fingerprint)
-
-			/*TEST_message := message {
-				result : result,
-				assigned_id : assigned_id,
-				goroutine_id : id,
-			}
-			fmt.Println("TEST : message de goroutine",id,": task : ",TEST_message.task," result :",
-				TEST_message.result," assigned_id :",TEST_message.assigned_id, " goroutine_id :",TEST_message.goroutine_id)*/
 
 			//We send the answer to the master goroutine
 			ch <- message {
@@ -245,8 +233,7 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 		} else if strings.Compare(rq.task,ASSIGNED_ID_ACCEPTED) == 0 {
 
 			//We store the fingerprint to keep it for next iterations
-			//fmt.Println("goroutine",id,"takes note of decision")
-			//fmt.Println("same combination ? ",os_browser_combination)
+
 			if len(os_browser_to_fps[os_browser_combination][assigned_id]) == nb_max_cmp {
     			//pop the first element
     			os_browser_to_fps[os_browser_combination][assigned_id] = os_browser_to_fps[os_browser_combination][assigned_id][1:]
@@ -261,7 +248,6 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 			//We do nothing
 
 		} else if strings.Compare(rq.task,DELETE_ELEMENTS_TOO_OLD) == 0 {
-			//fmt.Println("DELETE_ELEMENTS_TOO_OLD from goroutine",id)
 
 			for _, user_id_to_fps := range os_browser_to_fps {
 				ids_to_remove := NewStringSet()
@@ -282,7 +268,6 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 
 		} else if strings.Compare(rq.task,CLOSE_GOROUTINE) == 0 {
 
-			//fmt.Println("goroutine",id,"is closing ...")
 			return
 
 		} else {
@@ -300,11 +285,8 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		Takes as input the fingerprint dataset,
         the frequency of visit in days,
         link_fingerprint, the function used for the linking strategy
-        filename, path to the file to save results of the scenario
 	*/
 
-
-	//fmt.Println("TEST : nombre de goroutines :",goroutines_number)
 
 	//we store all the channels into a slice of channels
 	var channels []chan message
@@ -335,7 +317,6 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		if index % 500 == 0 {
 			fmt.Println("index : ",index)
 		}
-		//fmt.Println("===== INDEX : ",index,"=====")
 		counter := elt.fp_local_id.counter
 		fingerprint_unknown := counter_to_fingerprint[counter]
 
@@ -344,7 +325,6 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		for i := 0; i < goroutines_number; i++ {
 			channels[i] <- message{task : LINK,elt : elt, fp : fingerprint_unknown}
 		}
-		//fmt.Println("All the request were read by goroutines")
 
 		//We wait for the answers and we save them
 		answers := make([]message,goroutines_number)
@@ -370,19 +350,15 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 				conflictPresent = true
 			} 
 		}
-		//fmt.Println("All answers from goroutines were read by master")
-		//fmt.Println("conflictPresent :",conflictPresent,"candidate_found_count :",candidate_found_count, "chosen_goroutine_id",chosen_goroutine_id)
 
 		//Now, we take a decision
 		if !exactFoundPresent && (conflictPresent || candidate_found_count > 1 || candidate_found_count < 1) {
 			chosen_goroutine_id = min_index_in_int_slice(number_of_fingerprints_per_goroutine)
 		}
-		//fmt.Println("After decision, chosen_goroutine_id :",chosen_goroutine_id)
 
 		number_of_fingerprints_per_goroutine[chosen_goroutine_id] += 1
 
 		assigned_id := assigned_id_from_goroutine(answers, chosen_goroutine_id)
-		//fmt.Println("So, assigned_id :",assigned_id)
 
 		//We send the decision to the goroutines
 		for i := 0; i < goroutines_number; i++ {
@@ -406,14 +382,10 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
         
 	}
 
-	//fmt.Println("End of ReplayScenarioParallel function")
-	//fmt.Println("Closing goroutines ...")
 	for i := 0; i < goroutines_number; i++ {
 		channels[i] <- message{task : CLOSE_GOROUTINE}
 	}
-	//fmt.Println("All the goroutines are closed")
-	//os.Exit(0)
-	fmt.Println("number_of_fingerprints_per_goroutine :",number_of_fingerprints_per_goroutine)
+
 	return fps_available
 }
 

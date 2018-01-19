@@ -8,7 +8,7 @@ This repository contains a golang library for the algorithms which can track a f
 To use this library, you'll have to install some packages :
 
 ```
- $ go get github.com/texttheater/golang-levenshtein/levenshtein
+ $ go get github.com/xrash/smetrics
  $ go get github.com/satori/go.uuid
  $ go get github.com/avct/uasurfer
  $ go get gopkg.in/oleiade/reflections.v1

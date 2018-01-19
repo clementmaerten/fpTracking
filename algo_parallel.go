@@ -176,9 +176,9 @@ func RuleBasedLinkingParallel(fingerprint_unknown Fingerprint, user_id_to_fps ma
 
 //Definition of constants for the tasks in the messages
 const LINK = "link"
-const LINK_ANSWER = "link_answer"
 const ASSIGNED_ID_ACCEPTED = "acc"
 const ASSIGNED_ID_NOT_ACCEPTED = "not_acc"
+const DELETE_ELEMENTS_TOO_OLD = "deto"
 const CLOSE_GOROUTINE = "cg"
 
 type message struct {
@@ -210,13 +210,16 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 	var fp_local_id fingerprintLocalId
 	result := -1
 	assigned_id := ""
+	var current_time time.Time
+	time_limit := float64(30*24*60*60)
 
 	for {
 		rq := <- ch
 		if strings.Compare(rq.task,LINK) == 0 {
 			
 			fp_local_id = rq.elt.fp_local_id
-			counter_to_time[fp_local_id] = rq.elt.lastVisit
+			current_time = rq.elt.lastVisit
+			counter_to_time[fp_local_id] = current_time
 			counter_to_fingerprint[fp_local_id.counter] = rq.fp
 			
 			//We only compare to fingerprints which as the same os and same browser as the  unknown fingerprint
@@ -226,7 +229,6 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 			result, assigned_id = linkFingerprint(rq.fp, os_browser_to_fps[os_browser_combination], counter_to_fingerprint)
 
 			/*TEST_message := message {
-				task : LINK_ANSWER,
 				result : result,
 				assigned_id : assigned_id,
 				goroutine_id : id,
@@ -236,7 +238,6 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 
 			//We send the answer to the master goroutine
 			ch <- message {
-				task : LINK_ANSWER,
 				result : result,
 				assigned_id : assigned_id,
 				goroutine_id : id,
@@ -258,6 +259,26 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 
 		} else if strings.Compare(rq.task,ASSIGNED_ID_NOT_ACCEPTED) == 0 {
 			//We do nothing
+
+		} else if strings.Compare(rq.task,DELETE_ELEMENTS_TOO_OLD) == 0 {
+			//fmt.Println("DELETE_ELEMENTS_TOO_OLD from goroutine",id)
+
+			for _, user_id_to_fps := range os_browser_to_fps {
+				ids_to_remove := NewStringSet()
+				for user_id,fp_local_id_list := range user_id_to_fps {
+					index_last_element := len(fp_local_id_list)-1
+					if (index_last_element >= 0) {
+						fp_local_id_tmp := fp_local_id_list[index_last_element]
+						time_tmp := counter_to_time[fp_local_id_tmp]
+						if current_time.Sub(time_tmp).Seconds() > time_limit {
+							ids_to_remove.Add(user_id)
+						}
+					}
+				}
+				for user_id,_ := range ids_to_remove.GetSet() {
+					delete(user_id_to_fps,user_id)
+				}
+			}
 
 		} else if strings.Compare(rq.task,CLOSE_GOROUTINE) == 0 {
 
@@ -376,26 +397,13 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
         fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
         
 
-        /*every 2000 elements we delete elements too old
+        //every 2000 elements we delete elements too old
         if index % 2000 == 0 {
-        	//30 days in seconds
-        	time_limit := float64(30*24*60*60)
-        	ids_to_remove := NewStringSet()
-        	current_time := elt.lastVisit
-        	for user_id,fp_local_id_list := range user_id_to_fps {
-        		index_last_element := len(fp_local_id_list)-1
-        		if (index_last_element >= 0) {
-        			fp_local_id := fp_local_id_list[index_last_element]
-        			time_tmp := counter_to_time[fp_local_id]
-        			if current_time.Sub(time_tmp).Seconds() > time_limit {
-        				ids_to_remove.Add(user_id)
-        			}
-        		}
+        	for i := 0; i < goroutines_number; i++ {
+        		channels[i] <- message{task : DELETE_ELEMENTS_TOO_OLD}
         	}
-        	for user_id,_ := range ids_to_remove.GetSet() {
-        		delete(user_id_to_fps,user_id)
-        	}
-        }*/
+        }
+        
 	}
 
 	//fmt.Println("End of ReplayScenarioParallel function")

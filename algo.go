@@ -351,23 +351,16 @@ func checkErrorWriting(e error) {
 	}
 }
 
-func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprint_dataset []Fingerprint, filename1, filename2 string) {
-	/*
-	   Performs an analysis of a scenario result
-	*/
-
-	counter_to_fingerprint := make(map[int]Fingerprint)
-	real_user_id_to_nb_fps := make(map[string]int)
+func analyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprint_dataset []Fingerprint,
+	counter_to_fingerprint map[int]Fingerprint, real_user_id_to_nb_fps map[string]int,
+	real_id_to_assigned_ids map[string]*StringSet, assigned_id_to_real_ids map[string]*StringSet,
+	assigned_id_to_fingerprints map[string][]Fingerprint) {
 
 	for _,fingerprint := range fingerprint_dataset {
 		counter_to_fingerprint[fingerprint.Counter] = fingerprint
 	}
 
 	//We map new assigned ids to real ids in database
-	real_id_to_assigned_ids := make(map[string]*StringSet)
-	assigned_id_to_real_ids := make(map[string]*StringSet)
-	assigned_id_to_fingerprints := make(map[string][]Fingerprint)
-
 	for _,elt := range scenario_result {
 		counter := elt.fp_local_id.counter
 		assigned_id := elt.assigned_id
@@ -390,6 +383,22 @@ func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprin
 
 		assigned_id_to_fingerprints[assigned_id] = append(assigned_id_to_fingerprints[assigned_id],counter_to_fingerprint[counter])
 	}
+}
+
+func AnalyseScenarioResultInFiles(scenario_result []counter_and_assigned_id, fingerprint_dataset []Fingerprint, filename1, filename2 string) {
+	/*
+	   Performs an analysis of a scenario result
+	*/
+
+	counter_to_fingerprint := make(map[int]Fingerprint)
+	real_user_id_to_nb_fps := make(map[string]int)
+
+	real_id_to_assigned_ids := make(map[string]*StringSet)
+	assigned_id_to_real_ids := make(map[string]*StringSet)
+	assigned_id_to_fingerprints := make(map[string][]Fingerprint)
+
+	analyseScenarioResult(scenario_result, fingerprint_dataset, counter_to_fingerprint,
+		real_user_id_to_nb_fps, real_id_to_assigned_ids, assigned_id_to_real_ids, assigned_id_to_fingerprints)
 
 	//Create and write in the first result file
 	f,err := os.Create(filename1)
@@ -418,6 +427,69 @@ func AnalyseScenarioResult(scenario_result []counter_and_assigned_id, fingerprin
 			len(assigned_id_to_fingerprints[assigned_id]),ownership,ownership_id))
 		checkErrorWriting(err)
 	}
+}
+
+
+//Types for the results in JSON
+type Results1 struct {
+	RealId string
+	NbAssignedIds int
+	NbOriginalFp int
+	Ratio float64
+	MaxChain int
+}
+
+type Results2 struct {
+	AssignedId string
+	NbAssignedIds int
+	NbFingerprints int
+	Ownership float64
+	IdOwnership string
+}
+
+type ResultsForVisitFrequency struct {
+	VisitFrequency int
+	Res1 []Results1
+	Res2 []Results2
+}
+
+
+func AnalyseScenarioResultInJSON(visitFrequency int, scenario_result []counter_and_assigned_id, fingerprint_dataset []Fingerprint) ResultsForVisitFrequency {
+	/*
+	   Performs an analysis of a scenario result
+	*/
+
+	counter_to_fingerprint := make(map[int]Fingerprint)
+	real_user_id_to_nb_fps := make(map[string]int)
+
+	real_id_to_assigned_ids := make(map[string]*StringSet)
+	assigned_id_to_real_ids := make(map[string]*StringSet)
+	assigned_id_to_fingerprints := make(map[string][]Fingerprint)
+
+	analyseScenarioResult(scenario_result, fingerprint_dataset, counter_to_fingerprint,
+		real_user_id_to_nb_fps, real_id_to_assigned_ids, assigned_id_to_real_ids, assigned_id_to_fingerprints)
+
+	var results ResultsForVisitFrequency
+	results.VisitFrequency = visitFrequency
+
+	//don't iterate over reals_ids since some fps don't have end date and are not present
+	for real_id,set_assigned_ids := range real_id_to_assigned_ids {
+		max_chain := findLongestChain(real_id,real_id_to_assigned_ids,assigned_id_to_fingerprints)
+		ratio_stats := float64(real_user_id_to_nb_fps[real_id]) / float64(set_assigned_ids.Length())
+
+		results.Res1 = append(results.Res1, Results1{RealId : real_id,NbAssignedIds : set_assigned_ids.Length(),
+			NbOriginalFp : real_user_id_to_nb_fps[real_id], Ratio : ratio_stats,MaxChain : max_chain})
+	}
+
+
+	for assigned_id,set_real_ids := range assigned_id_to_real_ids {
+		ownership, ownership_id := computeOwnership(assigned_id_to_fingerprints[assigned_id])
+
+		results.Res2 = append(results.Res2, Results2{AssignedId : assigned_id,NbAssignedIds : set_real_ids.Length(),
+			NbFingerprints : len(assigned_id_to_fingerprints[assigned_id]),Ownership : ownership,IdOwnership : ownership_id})
+	}
+
+	return results
 }
 
 func findLongestChain(real_user_id string, real_id_to_assigned_ids map[string]*StringSet, assigned_id_to_fingerprints map[string][]Fingerprint) int {

@@ -19,6 +19,7 @@ type DBInformation struct {
 type FingerprintManager struct {
 	Number int
 	Train  float64
+	MinNumberFpPerUser int
 	DBInfo DBInformation
 }
 
@@ -69,14 +70,14 @@ func (fm FingerprintManager) GetFingerprints() ([]Fingerprint, []Fingerprint) {
 									creationDate IS NOT NULL AND
 									endDate IS NOT NULL AND char_length(id) > 15
 									AND id in (` + consistentIDsQuery + `) AND id in
-									(SELECT id FROM extensionData where counter < ? group by id having count(*) > 6) order by counter`)
+									(SELECT id FROM extensionData where counter < ? group by id having count(*) > ?) order by counter`)
 
 	if err != nil {
 		panic(err.Error()) // proper error handling instead of panic in your app
 	}
 	defer stmt.Close()
 
-	rows, err := stmt.Query(fm.Number, fm.Number)
+	rows, err := stmt.Query(fm.Number, fm.Number, fm.MinNumberFpPerUser)
 	if err != nil {
 		log.Fatal(err)
 	}

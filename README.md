@@ -70,6 +70,7 @@ func main() {
 	fingerprintManager := fpTracking.FingerprintManager{
 		Number: number,
 		Train:  train,
+		MinNumberFpPerUser: 6,
 		DBInfo: fpTracking.DBInformation {
 			DBType: "mysql",
 			User: "root",

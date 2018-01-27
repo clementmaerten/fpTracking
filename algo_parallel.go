@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"time"
+	"sort"
 	"strings"
 	"gopkg.in/oleiade/reflections.v1"
 	"github.com/xrash/smetrics"
@@ -305,6 +306,10 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	}
 
 	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
+
+	//We sort replaySequence because if we don't, it won't be determinist
+	sort.Sort(byCounterFirst(replaySequence))
+
 	counter_to_fingerprint := make(map[int]Fingerprint)
 	for _,fingerprint := range fingerprintDataset {
 		counter_to_fingerprint[fingerprint.Counter] = fingerprint
@@ -319,7 +324,6 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		}
 		counter := elt.fp_local_id.counter
 		fingerprint_unknown := counter_to_fingerprint[counter]
-
 
 		//We send to all goroutines the instruction to try to link the fingerprint
 		for i := 0; i < goroutines_number; i++ {
@@ -414,3 +418,25 @@ func assigned_id_from_goroutine (answers []message, id int) string {
 	fmt.Println("Error in assigned_id_from_goroutine")
 	return ""
 }
+
+//functions to sort replaySequence by counter and then by order
+type byCounterFirst []sequenceElt
+
+func (a byCounterFirst) Len() int {
+	return len(a)
+}
+
+func (a byCounterFirst) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a byCounterFirst) Less(i, j int) bool {
+	if a[i].fp_local_id.counter < a[j].fp_local_id.counter {
+		return true
+	}
+	if a[i].fp_local_id.counter > a[j].fp_local_id.counter {
+		return false
+	}
+	return a[i].fp_local_id.order < a[j].fp_local_id.order
+}
+//end of sorting functions

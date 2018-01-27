@@ -179,6 +179,7 @@ const LINK = "link"
 const ASSIGNED_ID_ACCEPTED = "acc"
 const ASSIGNED_ID_NOT_ACCEPTED = "not_acc"
 const DELETE_ELEMENTS_TOO_OLD = "deto"
+const SEND_PROGRESS_INFORMATION = "spi"
 const CLOSE_GOROUTINE = "cg"
 
 type message struct {
@@ -393,6 +394,136 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	return fps_available
 }
 
+//The algorithm below is the same as ReplayScenarioParallel, but send progress information in a channel
+//First, we define the structure of the messages. This structure must be public in order to be used by the main program.
+type ProgressMessage struct {
+	Task string
+	VisitFrequency int
+	Progression int
+}
+//Then, here is the function
+func ReplayScenarioParallelWithProgressInformation (fingerprintDataset []Fingerprint, visitFrequency int,
+	linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), 
+	goroutines_number int, progress_channel chan <- ProgressMessage) []counter_and_assigned_id {
+
+	/*
+		Takes as input the fingerprint dataset,
+        the frequency of visit in days,
+        link_fingerprint, the function used for the linking strategy
+	*/
+
+
+	//we store all the channels into a slice of channels
+	var channels []chan message
+
+	for i := 0; i < goroutines_number; i++ {
+		ch := make(chan message)
+		defer close(ch)
+		channels = append(channels,ch)
+		go parallelLinking(i, linkFingerprint, ch)
+	}
+
+	//we keep the number of fingerprints remembered by each goroutine
+	var number_of_fingerprints_per_goroutine []int
+	for i := 0; i < goroutines_number; i++ {
+		number_of_fingerprints_per_goroutine = append(number_of_fingerprints_per_goroutine,0)
+	}
+
+	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
+
+	//We sort replaySequence because if we don't, it won't be determinist
+	sort.Sort(byCounterFirst(replaySequence))
+
+	counter_to_fingerprint := make(map[int]Fingerprint)
+	for _,fingerprint := range fingerprintDataset {
+		counter_to_fingerprint[fingerprint.Counter] = fingerprint
+	}
+
+	var fps_available []counter_and_assigned_id //Set of know fingerprints (new_counter,assigned_id)
+
+	replaySequenceLength := len(replaySequence)
+
+	for index, elt := range replaySequence {
+		if index % 100 == 0 {
+			progress_channel <- ProgressMessage {
+				Task : SEND_PROGRESS_INFORMATION,
+				VisitFrequency : visitFrequency,
+				Progression : index * 100 / replaySequenceLength,
+			}
+		}
+		counter := elt.fp_local_id.counter
+		fingerprint_unknown := counter_to_fingerprint[counter]
+
+		//We send to all goroutines the instruction to try to link the fingerprint
+		for i := 0; i < goroutines_number; i++ {
+			channels[i] <- message{task : LINK,elt : elt, fp : fingerprint_unknown}
+		}
+
+		//We wait for the answers and we save them
+		answers := make([]message,goroutines_number)
+		for i := 0; i < goroutines_number; i++ {
+			answers[i] = <- channels[i]
+		}
+
+		//we look at the conflicts to take a decision
+		conflictPresent := false
+		candidate_found_count := 0
+		chosen_goroutine_id := -1
+		exactFoundPresent := false
+		for i := 0; i < goroutines_number; i++ {
+			if answers[i].result == EXACT_FOUND {
+				chosen_goroutine_id = answers[i].goroutine_id
+				exactFoundPresent = true
+			} else if answers[i].result == CANDIDATE_FOUND {
+				candidate_found_count += 1
+				if !exactFoundPresent {
+					chosen_goroutine_id = answers[i].goroutine_id
+				}
+			} else if answers[i].result == CONFLICT {
+				conflictPresent = true
+			} 
+		}
+
+		//Now, we take a decision
+		if !exactFoundPresent && (conflictPresent || candidate_found_count > 1 || candidate_found_count < 1) {
+			chosen_goroutine_id = min_index_in_int_slice(number_of_fingerprints_per_goroutine)
+		}
+
+		number_of_fingerprints_per_goroutine[chosen_goroutine_id] += 1
+
+		assigned_id := assigned_id_from_goroutine(answers, chosen_goroutine_id)
+
+		//We send the decision to the goroutines
+		for i := 0; i < goroutines_number; i++ {
+			if i == chosen_goroutine_id {
+				channels[i] <- message{task : ASSIGNED_ID_ACCEPTED}
+			} else {
+				channels[i] <- message{task : ASSIGNED_ID_NOT_ACCEPTED}
+			}
+		}
+
+        
+        fps_available = append(fps_available, counter_and_assigned_id{fp_local_id: elt.fp_local_id, assigned_id: assigned_id})
+        
+
+        //every 2000 elements we delete elements too old
+        if index % 2000 == 0 {
+        	for i := 0; i < goroutines_number; i++ {
+        		channels[i] <- message{task : DELETE_ELEMENTS_TOO_OLD}
+        	}
+        }
+        
+	}
+
+	for i := 0; i < goroutines_number; i++ {
+		channels[i] <- message{task : CLOSE_GOROUTINE}
+	}
+
+	return fps_available
+}
+
+
+//Functions required by the algorithms
 func min_index_in_int_slice (slice []int) int {
 	length := len(slice)
 	min := slice[0]

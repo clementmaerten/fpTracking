@@ -254,7 +254,11 @@ func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int
 	// }
 
 	sort.Slice(replaySequence, func(i, j int) bool {
-		return replaySequence[i].lastVisit.Sub(replaySequence[j].lastVisit) < 0
+		if replaySequence[i].lastVisit != replaySequence[j].lastVisit {
+			return replaySequence[i].lastVisit.Sub(replaySequence[j].lastVisit) < 0
+		} else {
+			return replaySequence[i].fp_local_id.counter < replaySequence[j].fp_local_id.counter
+		}
 	})
 
 	return replaySequence

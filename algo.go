@@ -194,12 +194,12 @@ func generate_new_id() string {
 	return fmt.Sprintf("%s",gen)
 }
 
-type sequenceElt struct {
+type SequenceElt struct {
 	fp_local_id fingerprintLocalId
 	lastVisit  time.Time
 }
 
-func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int) []sequenceElt {
+func GenerateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int) []SequenceElt {
 
 	/*
 		Takes as input a set of fingerprint fingerprintDataset,
@@ -212,17 +212,17 @@ func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int
 	for _, fingerprint := range fingerprintDataset {
 		userIDToFingerprints[fingerprint.UserID] = append(userIDToFingerprints[fingerprint.UserID], fingerprint)
 	}
-	userIDToSequence := make(map[string][]sequenceElt)
+	userIDToSequence := make(map[string][]SequenceElt)
 
 	for userID := range userIDToFingerprints {
 		// fmt.Printf("user id: %s\n", userID)
 		if len(userIDToFingerprints[userID]) > 1 {
-			sequence := make([]sequenceElt, 0)
+			sequence := make([]SequenceElt, 0)
 			lastVisit := userIDToFingerprints[userID][0].CreationDate
 			counterSuffix := "i"
 			assignedCounter := fingerprintLocalId{counter: userIDToFingerprints[userID][0].Counter,
 				order: counterSuffix}
-			sequence = append(sequence, sequenceElt{fp_local_id: assignedCounter,
+			sequence = append(sequence, SequenceElt{fp_local_id: assignedCounter,
 				lastVisit: lastVisit})
 
 			for i := 0; i < len(userIDToFingerprints[userID])-1; i++ {
@@ -233,7 +233,7 @@ func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int
 					lastVisit = lastVisit.AddDate(0, 0, visitFrequency)
 					counterSuffixString := fmt.Sprintf("%d",counterSuffixInt)
 					assignedCounter = fingerprintLocalId{counter: fingerprint.Counter, order: counterSuffixString}
-					sequence = append(sequence, sequenceElt{fp_local_id: assignedCounter,
+					sequence = append(sequence, SequenceElt{fp_local_id: assignedCounter,
 						lastVisit: lastVisit})
 					counterSuffixInt++
 				}
@@ -242,7 +242,7 @@ func generateReplaySequence(fingerprintDataset []Fingerprint, visitFrequency int
 		}
 	}
 
-	replaySequence := make([]sequenceElt, 0)
+	replaySequence := make([]SequenceElt, 0)
 	for _, sequences := range userIDToSequence {
 		for _, sequence := range sequences {
 			replaySequence = append(replaySequence, sequence)
@@ -279,7 +279,7 @@ func ReplayScenario (fingerprintDataset []Fingerprint, visitFrequency int, linkF
 	*/
 
 	nb_max_cmp := 2
-	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
+	replaySequence := GenerateReplaySequence(fingerprintDataset,visitFrequency)
 	counter_to_fingerprint := make(map[int]Fingerprint)
 	for _,fingerprint := range fingerprintDataset {
 		counter_to_fingerprint[fingerprint.Counter] = fingerprint

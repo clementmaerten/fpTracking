@@ -183,7 +183,7 @@ const CLOSE_GOROUTINE = "cg"
 
 type message struct {
 	task string
-	elt sequenceElt
+	elt SequenceElt
 	fp Fingerprint
 	result int
 	assigned_id string
@@ -280,7 +280,9 @@ func parallelLinking (id int, linkFingerprint func(Fingerprint, map[string][]fin
 }
 
 
-func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency int, linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), goroutines_number int) []counter_and_assigned_id {
+func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency int,
+	linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string),
+	goroutines_number int) []counter_and_assigned_id {
 
 	/*
 		Takes as input the fingerprint dataset,
@@ -305,7 +307,7 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 		number_of_fingerprints_per_goroutine = append(number_of_fingerprints_per_goroutine,0)
 	}
 
-	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
+	replaySequence := GenerateReplaySequence(fingerprintDataset,visitFrequency)
 
 	counter_to_fingerprint := make(map[int]Fingerprint)
 	for _,fingerprint := range fingerprintDataset {
@@ -395,12 +397,13 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 type ProgressMessage struct {
 	Task string
 	VisitFrequency int
-	Progression int
+	Index int
 }
 //Then, here is the function
+//You must give the replaySequence for this function
 func ReplayScenarioParallelWithProgressInformation (fingerprintDataset []Fingerprint, visitFrequency int,
 	linkFingerprint func(Fingerprint, map[string][]fingerprintLocalId, map[int]Fingerprint) (int,string), 
-	goroutines_number int, progress_channel chan <- ProgressMessage) []counter_and_assigned_id {
+	goroutines_number int, replaySequence []SequenceElt, progress_channel chan <- ProgressMessage) []counter_and_assigned_id {
 
 	/*
 		Takes as input the fingerprint dataset,
@@ -425,8 +428,6 @@ func ReplayScenarioParallelWithProgressInformation (fingerprintDataset []Fingerp
 		number_of_fingerprints_per_goroutine = append(number_of_fingerprints_per_goroutine,0)
 	}
 
-	replaySequence := generateReplaySequence(fingerprintDataset,visitFrequency)
-
 	counter_to_fingerprint := make(map[int]Fingerprint)
 	for _,fingerprint := range fingerprintDataset {
 		counter_to_fingerprint[fingerprint.Counter] = fingerprint
@@ -434,14 +435,12 @@ func ReplayScenarioParallelWithProgressInformation (fingerprintDataset []Fingerp
 
 	var fps_available []counter_and_assigned_id //Set of know fingerprints (new_counter,assigned_id)
 
-	replaySequenceLength := len(replaySequence)
-
 	for index, elt := range replaySequence {
 		if index % 100 == 0 {
 			progress_channel <- ProgressMessage {
 				Task : SEND_PROGRESS_INFORMATION,
 				VisitFrequency : visitFrequency,
-				Progression : index * 100 / replaySequenceLength,
+				Index : index,
 			}
 		}
 		counter := elt.fp_local_id.counter

@@ -179,6 +179,7 @@ const ASSIGNED_ID_ACCEPTED = "acc"
 const ASSIGNED_ID_NOT_ACCEPTED = "not_acc"
 const DELETE_ELEMENTS_TOO_OLD = "deto"
 const SEND_PROGRESS_INFORMATION = "spi"
+const SEND_RESULTS_FOR_VISIT_FREQUENCY = "srfvf"
 const CLOSE_GOROUTINE = "cg"
 
 type message struct {
@@ -398,6 +399,7 @@ type ProgressMessage struct {
 	Task string
 	VisitFrequency int
 	Index int
+	ResForVisitFreq ResultsForVisitFrequency
 }
 //Then, here is the function
 //You must give the replaySequence for this function

@@ -179,7 +179,7 @@ const ASSIGNED_ID_ACCEPTED = "acc"
 const ASSIGNED_ID_NOT_ACCEPTED = "not_acc"
 const DELETE_ELEMENTS_TOO_OLD = "deto"
 const SEND_PROGRESS_INFORMATION = "spi"
-const SEND_RESULTS_FOR_VISIT_FREQUENCY = "srfvf"
+const SEND_NEW_COMPUTED_POINTS = "sncp"
 const CLOSE_GOROUTINE = "cg"
 
 type message struct {
@@ -393,13 +393,18 @@ func ReplayScenarioParallel (fingerprintDataset []Fingerprint, visitFrequency in
 	return fps_available
 }
 
+type GraphicPoint struct {
+	VisitFrequency int
+	Value float64
+}
+
 //The algorithm below is the same as ReplayScenarioParallel, but send progress information in a channel
 //First, we define the structure of the messages. This structure must be public in order to be used by the main program.
 type ProgressMessage struct {
 	Task string
 	VisitFrequency int
 	Index int
-	ResForVisitFreq ResultsForVisitFrequency
+	GraphPoints map[string]GraphicPoint
 }
 //Then, here is the function
 //You must give the replaySequence for this function

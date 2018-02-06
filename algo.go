@@ -434,7 +434,7 @@ func AnalyseScenarioResultInFiles(scenario_result []counter_and_assigned_id, fin
 }
 
 
-//Types for the results in JSON
+//Types for the results
 type Results1 struct {
 	RealId string
 	NbAssignedIds int
@@ -458,7 +458,7 @@ type ResultsForVisitFrequency struct {
 }
 
 
-func AnalyseScenarioResultInJSON(visitFrequency int, scenario_result []counter_and_assigned_id, fingerprint_dataset []Fingerprint) ResultsForVisitFrequency {
+func AnalyseScenarioResultInStruct(visitFrequency int, scenario_result []counter_and_assigned_id, fingerprint_dataset []Fingerprint) ResultsForVisitFrequency {
 	/*
 	   Performs an analysis of a scenario result
 	*/

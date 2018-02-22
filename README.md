@@ -1,43 +1,38 @@
 # fpTracking
 
-This repository contains a golang library for the algorithms which can track a fingerprint over the time. These algorithms were developped by the Spirals Team of the INRIA in Lille.
+This repository contains a Golang library for the algorithms which can track a fingerprint over the time. These algorithms were developped by the Spirals Team of the INRIA in Lille.
 
 ## Getting Started
 ### Prerequisites
 
-To use this library, you'll have to install some packages :
+To use this library, you'll have to install some libraries :
 
 ```
- $ go get github.com/xrash/smetrics
- $ go get github.com/satori/go.uuid
- $ go get github.com/avct/uasurfer
- $ go get gopkg.in/oleiade/reflections.v1
+ github.com/xrash/smetrics
+ github.com/satori/go.uuid
+ github.com/avct/uasurfer
+ gopkg.in/oleiade/reflections.v1
 ```
+
+There is a Makefile in this package in order to install these libraries.
 
 ### Installing
 
-For now, as the repository is private, **go get** function to get this package won't work. So here are the steps in order to install it :
+To download and use this package, follow the instructions below :
 
- * Create the github.com/clementmaerten directory inside your go workspace
+ * Get the repository
 ```
- $ mkdir -p $(go env GOPATH)/src/github.com/clementmaerten
+ $ go get github.com/clementmaerten/fpTracking
 ```
 
  * Go inside this directory
 ```
- $ cd $(go env GOPATH)/src/github.com/clementmaerten
+ $ cd $(go env GOPATH)/src/github.com/clementmaerten/fpTracking
 ```
 
- * Then clone the repository
+ * Then execute the Makefile (it will download the required libraries and install the package)
 ```
- $ git clone https://github.com/clementmaerten/fpTracking.git
- or
- $ git clone git@github.com:clementmaerten/fpTracking.git
-```
-
- * Then install the library
-```
- $ go install github.com/clementmaerten/fpTracking
+ $ make
 ```
 
 Here is an example of a small program which reads into the database some fingerprints and tries to link them (here the database is mysql so it needs github.com/go-sql-driver/mysql in order to work) :

@@ -102,3 +102,7 @@ func main() {
 }
 
 ```
+
+You'll have to change the database information in order to run the program.
+
+In the folder which contains your executable, you'll also need to create a folder called data in which you'll have to create a file called consistent_extension_ids.csv. This file must contains all the consistent ids in your database.

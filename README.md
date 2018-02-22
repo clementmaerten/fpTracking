@@ -49,6 +49,7 @@ import (
 	"os"
 	"fmt"
 	"strconv"
+	"time"
 	"github.com/clementmaerten/fpTracking"
 	_ "github.com/go-sql-driver/mysql"
 )
@@ -62,9 +63,13 @@ func main() {
 
 	number, err1 := strconv.Atoi(os.Args[1])
 	train, err2 := strconv.ParseFloat(os.Args[2],64)
-	if (err1 != nil || err2 != nil || train < 0 || train > 1) {
+	if (err1 != nil || err2 != nil) {
 		fmt.Println("The format is not respected !")
 		os.Exit(1)
+	}
+
+	if _, errFold := os.Stat("results"); os.IsNotExist(errFold) {
+		os.Mkdir("results", 0700)
 	}
 
 	fingerprintManager := fpTracking.FingerprintManager{
@@ -80,16 +85,25 @@ func main() {
 		},
 	}
 
+	beginTime := time.Now()
+
 	fmt.Printf("Start fetching fingerprints\n")
 	_, test := fingerprintManager.GetFingerprints()
 	fmt.Printf("Fetched %d fingerprints\n", len(test))
 	visitFrequencies := []int{1, 2, 3, 4, 5, 6, 7, 8, 10, 15, 20}
 	expName := "testrule1"
 	for _, visitFrequency := range visitFrequencies {
+		fmt.Println("Visit frequency :",visitFrequency)
+
 		fileName1 := fmt.Sprintf("./results/%s_%d-res1.csv", expName, visitFrequency)
 		fileName2 := fmt.Sprintf("./results/%s_%d-res2.csv", expName, visitFrequency)
+		
 		scenarioResult := fpTracking.ReplayScenario(test, visitFrequency, fpTracking.RuleBasedLinking)
-		fpTracking.AnalyseScenarioResult(scenarioResult, test, fileName1, fileName2)
+		fpTracking.AnalyseScenarioResultInFiles(scenarioResult, test, fileName1, fileName2)
+
 	}
+
+	fmt.Println("Total time :",time.Since(beginTime).Seconds(),"seconds")
 }
+
 ```
